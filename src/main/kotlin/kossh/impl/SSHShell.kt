@@ -308,8 +308,10 @@ class SSHShell(ssh: SSH): SSHScp(ssh), AllOperations {
             readyMessageQuotePrefix = "'$newReadyMessage"
         }
 
+        private val baos = ByteArrayOutputStream()
         override fun write(b: Int) {
             if (b != 13) {
+                baos.write(b)
                 val ch = b.toChar()
                 consumerAppender.append(ch)
                 if (!ready) {
@@ -318,7 +320,7 @@ class SSHShell(ssh: SSH): SSHScp(ssh), AllOperations {
                         readyQueue.put("ready")
                     }
                 } else {
-                    if (currentExpects.size > 0 && currentExpects.first().expectWhen(consumerAppender.toString())) {
+                    if (currentExpects.isNotEmpty() && currentExpects.first().expectWhen(consumerAppender.toString())) {
                         toServer.write(currentExpects.first().send)
                         currentExpects = currentExpects.drop(1)
                     }
@@ -327,8 +329,10 @@ class SSHShell(ssh: SSH): SSHScp(ssh), AllOperations {
                         && !consumerAppender.endsWith(promptEqualPrefix)) {
                         val promptIndex = consumerAppender.length - promptSize
                         val firstNlIndex = consumerAppender.indexOf("\n")
-                        val result = consumerAppender.substring(firstNlIndex+1, promptIndex)
+                        val result =
+                            String(baos.toByteArray().slice(firstNlIndex+1 until promptIndex).toByteArray())
                         resultsQueue.put(result)
+                        baos.reset()
                         searchForPromptIndex = 0
                         consumerAppender.setLength(0)
                     } else {
@@ -339,6 +343,4 @@ class SSHShell(ssh: SSH): SSHScp(ssh), AllOperations {
             }
         }
     }
-
-
 }
