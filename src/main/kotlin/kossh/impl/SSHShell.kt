@@ -48,6 +48,7 @@ class SSHShell(ssh: SSH): SSHScp(ssh), AllOperations {
         fromServer.close()
         toServer.close()
         channel.disconnect()
+        ssh.close()
     }
 
     /**
